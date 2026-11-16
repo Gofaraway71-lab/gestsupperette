@@ -1,6 +1,3 @@
-// src/api.js
-// Pont universel : utilise Electron (SQLite) si disponible, sinon le stockage local navigateur (pour Google AI Studio)
-
 const STORAGE_KEY = 'gestsupperette_db_v1';
 
 const utcNowSql = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
@@ -65,7 +62,7 @@ function loadDb() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
+  } catch { }
   const seed = createSeedDb();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
   return seed;
