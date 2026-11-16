@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { posApi } from '../api';
+import CsvStockImportModal from './CsvStockImportModal';
 
-export default function StockView({ user }) {
+export default function StockView({ user, lang = 'fr' }) {
   const [products, setProducts] = useState([]);
   const [movements, setMovements] = useState([]);
   const [onlyLow, setOnlyLow] = useState(true);
   const [selected, setSelected] = useState(null);
   const [delta, setDelta] = useState('');
   const [reason, setReason] = useState('Réapprovisionnement fournisseur');
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [toast, setToast] = useState('');
 
   const load = async () => {
     setProducts(await posApi.listProducts());
@@ -39,6 +42,9 @@ export default function StockView({ user }) {
       <div className="page-header">
         <h2>📊 Gestion du Stock</h2>
         <div className="row-actions">
+          <button className="btn btn-secondary" onClick={() => setShowCsvModal(true)}>
+            📥 Importer Stock CSV
+          </button>
           <button className={`btn ${onlyLow ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setOnlyLow(true)}>
             ⚠️ Alertes stock bas ({products.filter((p) => p.stock <= p.alert_threshold).length})
           </button>
@@ -47,6 +53,8 @@ export default function StockView({ user }) {
           </button>
         </div>
       </div>
+
+      {toast && <div className="toast-banner" style={{ marginBottom: 12 }}>{toast}</div>}
 
       <div className="split-2">
         <div className="card-table-wrap">
@@ -125,6 +133,20 @@ export default function StockView({ user }) {
             </form>
           </div>
         </div>
+      )}
+      {showCsvModal && (
+        <CsvStockImportModal
+          products={products}
+          user={user}
+          lang={lang}
+          onImported={(res) => {
+            setShowCsvModal(false);
+            load();
+            setToast(`Import CSV terminé : ${res.updatedCount} mis à jour, ${res.createdCount} créé(s).`);
+            setTimeout(() => setToast(''), 4000);
+          }}
+          onClose={() => setShowCsvModal(false)}
+        />
       )}
     </div>
   );

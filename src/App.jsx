@@ -5,7 +5,9 @@ import PinLogin from './components/PinLogin';
 import PosScreen from './components/PosScreen';
 import ProductsView from './components/ProductsView';
 import StockView from './components/StockView';
+import SuppliersView from './components/SuppliersView';
 import ReportsView from './components/ReportsView';
+import HelpModal from './components/HelpModal';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -14,6 +16,7 @@ export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('pos_dark') === '1');
   const [settings, setSettings] = useState({});
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
   const t = translations[lang];
 
@@ -36,6 +39,20 @@ export default function App() {
       posApi.getDashboardStats().then((s) => setLowStockCount(s.low_stock_count));
     }
   }, [user, view]);
+
+  useEffect(() => {
+    const onGlobalKey = (e) => {
+      if (e.key === 'F9') {
+        e.preventDefault();
+        setShowHelp((prev) => !prev);
+      } else if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) {
+        e.preventDefault();
+        setShowHelp((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onGlobalKey);
+    return () => window.removeEventListener('keydown', onGlobalKey);
+  }, []);
 
   if (!user) {
     return <PinLogin t={t} onLoginSuccess={(u) => { setUser(u); setView('pos'); }} />;
@@ -60,6 +77,9 @@ export default function App() {
                 <button className={`nav-btn ${view === 'stock' ? 'active' : ''}`} onClick={() => setView('stock')}>
                   {t.navStock} {lowStockCount > 0 && <span className="nav-badge">{lowStockCount}</span>}
                 </button>
+                <button className={`nav-btn ${view === 'suppliers' ? 'active' : ''}`} onClick={() => setView('suppliers')}>
+                  {t.navSuppliers}
+                </button>
                 <button className={`nav-btn ${view === 'reports' ? 'active' : ''}`} onClick={() => setView('reports')}>
                   {t.navReports}
                 </button>
@@ -69,11 +89,28 @@ export default function App() {
         </div>
 
         <div className="topbar-right">
+          <button
+            type="button"
+            className="btn-icon-txt"
+            onClick={() => setShowHelp(true)}
+            title={`${t.helpTitle} (F9)`}
+            aria-label={t.helpTitle}
+          >
+            ❓ {t.helpBtn}
+          </button>
           <button className="btn-icon-txt" onClick={() => setLang(lang === 'fr' ? 'ar' : 'fr')}>
             {lang === 'fr' ? 'العربية' : 'FR'}
           </button>
-          <button className="btn-icon-txt" onClick={() => setDark(!dark)}>
-            {dark ? '☀️' : '🌙'}
+          <button
+            type="button"
+            className={`theme-toggle-btn ${dark ? 'is-dark' : ''}`}
+            aria-pressed={dark}
+            aria-label={t.toggleTheme}
+            title={t.toggleTheme}
+            onClick={() => setDark((prev) => !prev)}
+          >
+            <span aria-hidden="true">{dark ? '☀️' : '🌙'}</span>
+            <span>{dark ? t.lightMode : t.darkMode}</span>
           </button>
           <span className="user-pill">
             👤 {user.name} ({isManager ? t.manager : t.cashier})
@@ -83,13 +120,16 @@ export default function App() {
       </header>
 
       <main className="main-content">
-        {view === 'pos' && <PosScreen user={user} settings={settings} lang={lang} t={t} />}
-        {view === 'products' && isManager && <ProductsView lang={lang} t={t} />}
-        {view === 'stock' && isManager && <StockView user={user} />}
+        {view === 'pos' && <PosScreen user={user} settings={settings} lang={lang} t={t} onOpenHelp={() => setShowHelp(true)} />}
+        {view === 'products' && isManager && <ProductsView user={user} settings={settings} lang={lang} t={t} />}
+        {view === 'stock' && isManager && <StockView user={user} lang={lang} />}
+        {view === 'suppliers' && isManager && <SuppliersView user={user} lang={lang} t={t} />}
         {view === 'reports' && isManager && (
           <ReportsView user={user} settings={settings} onSettingsUpdated={setSettings} lang={lang} t={t} />
         )}
       </main>
+
+      {showHelp && <HelpModal t={t} onClose={() => setShowHelp(false)} />}
     </div>
   );
 }

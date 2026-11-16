@@ -86,7 +86,24 @@ export default function ReportsView({ user, settings, onSettingsUpdated, lang, t
             <div className="kpi-card"><span>Chiffre d'affaires (Jour)</span><strong>{formatDA(stats.revenue, lang)}</strong></div>
             <div className="kpi-card"><span>Tickets validés</span><strong>{stats.tickets_count}</strong></div>
             <div className="kpi-card"><span>Panier moyen</span><strong>{formatDA(stats.avg_basket, lang)}</strong></div>
-            <div className="kpi-card"><span>Bénéfice estimé</span><strong className="txt-ok">{formatDA(stats.estimated_profit, lang)}</strong></div>
+            <div className="kpi-card"><span>Bénéfice estimé (Jour)</span><strong className="txt-ok">{formatDA(stats.estimated_profit, lang)}</strong></div>
+            <div className="kpi-card">
+              <span>📊 {t.profitMarginKpi}</span>
+              <strong className={stats.net_margin_amount >= 0 ? 'txt-ok' : 'txt-bad'}>
+                {stats.total_sales_revenue > 0 ? `${stats.profit_margin_pct.toFixed(1)} %` : '—'}
+              </strong>
+              <div className="kpi-sub">
+                <div>{t.totalSalesLabel} : <b>{formatDA(stats.total_sales_revenue, lang)}</b></div>
+                <div>{t.invoiceCostsLabel} : <b>{formatDA(stats.supplier_invoice_costs, lang)}</b></div>
+                <div>
+                  {t.netMarginLabel} :{' '}
+                  <b className={stats.net_margin_amount >= 0 ? 'txt-ok' : 'txt-bad'}>
+                    {stats.net_margin_amount > 0 ? '+' : ''}
+                    {formatDA(stats.net_margin_amount, lang)}
+                  </b>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="split-2" style={{ marginTop: 18 }}>
@@ -98,13 +115,66 @@ export default function ReportsView({ user, settings, onSettingsUpdated, lang, t
             </div>
             <div className="card-box">
               <h4>Top 10 produits</h4>
-              {stats.top_products.map((tp, i) => (
-                <div key={i} className="stat-line">
-                  <span>{i + 1}. {tp.product_name}</span>
-                  <b>{tp.qty_sold} u. ({formatDA(tp.total_sales, lang)})</b>
-                </div>
-              ))}
+              {stats.top_products.length === 0 ? (
+                <div className="muted" style={{ fontSize: 13 }}>{t.noSalesProfitYet}</div>
+              ) : (
+                stats.top_products.map((tp, i) => (
+                  <div key={i} className="stat-line">
+                    <span>{i + 1}. {tp.product_name}</span>
+                    <b>{tp.qty_sold} u. ({formatDA(tp.total_sales, lang)})</b>
+                  </div>
+                ))
+              )}
             </div>
+          </div>
+
+          <div className="card-table-wrap" style={{ marginTop: 18 }}>
+            <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+              <h4 style={{ margin: 0 }}>💹 {t.productProfitabilityTitle}</h4>
+              <span className="muted" style={{ fontSize: 12 }}>
+                {t.totalSalesLabel} : {formatDA(stats.total_sales_revenue, lang)} • {t.invoiceCostsLabel} : {formatDA(stats.supplier_invoice_costs, lang)}
+              </span>
+            </div>
+            {(!stats.product_profitability || stats.product_profitability.length === 0) ? (
+              <div style={{ padding: 18 }} className="muted">{t.noSalesProfitYet}</div>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>{t.product}</th>
+                    <th className="text-center">{t.qty}</th>
+                    <th className="text-end">{t.totalSalesLabel}</th>
+                    <th className="text-end">{t.unitCostCol}</th>
+                    <th className="text-end">{t.profitCol}</th>
+                    <th className="text-center">{t.marginPctCol}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.product_profitability.map((row) => {
+                    const pillCls = row.margin_pct >= 20 ? 'pill-ok' : row.margin_pct >= 0 ? 'pill-warn' : 'pill-danger';
+                    return (
+                      <tr key={row.product_id}>
+                        <td>
+                          <b>{row.product_name}</b>{' '}
+                          <span className={`pill ${row.cost_source === 'invoice' ? 'pill-ok' : ''}`} style={{ fontSize: 11 }}>
+                            {row.cost_source === 'invoice' ? t.costSourceInvoice : t.costSourceCatalog}
+                          </span>
+                        </td>
+                        <td className="text-center">{row.qty_sold}</td>
+                        <td className="text-end">{formatDA(row.sales_revenue, lang)}</td>
+                        <td className="text-end muted">{formatDA(row.total_cost, lang)}</td>
+                        <td className={`text-end bold ${row.profit >= 0 ? 'txt-ok' : 'txt-bad'}`}>
+                          {row.profit > 0 ? '+' : ''}{formatDA(row.profit, lang)}
+                        </td>
+                        <td className="text-center">
+                          <span className={`pill ${pillCls}`}>{row.margin_pct.toFixed(1)} %</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}
